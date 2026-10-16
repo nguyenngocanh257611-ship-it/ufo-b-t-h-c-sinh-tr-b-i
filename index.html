@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UFO Bắt Học Sinh Trả Bài</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@600;700;800&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Nunito', sans-serif;
+      overflow: hidden;
+      user-select: none;
+    }
+    .font-cute {
+      font-family: 'Comfortaa', cursive;
+    }
+    /* Chùm sáng huyền ảo */
+    @keyframes pulseGlow {
+      0%, 100% { opacity: 0.65; transform: scaleX(1); }
+      50% { opacity: 0.85; transform: scaleX(1.04); }
+    }
+    .beam-glow {
+      animation: pulseGlow 1.8s infinite ease-in-out;
+    }
+    /* Hiệu ứng kính bóng mờ */
+    .glass-panel {
+      background: rgba(18, 25, 44, 0.75);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+    /* Thanh cuộn tinh tế */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(0,0,0,0.1);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(56, 189, 248, 0.4);
+      border-radius: 9999px;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-white w-screen h-screen relative overflow-hidden flex flex-col justify-between">
+
+  <!-- CANVAS CHÍNH CHO BỐI CẢNH THÀNH PHỐ, HỌC SINH VÀ UFO -->
+  <canvas id="gameCanvas" class="absolute inset-0 z-0 w-full h-full"></canvas>
+
+  <!-- THANH CÔNG CỤ TRÊN CÙNG (TOP BAR) -->
+  <header class="relative z-20 flex items-center justify-between px-4 sm:px-8 py-3 w-full">
+    <!-- Trạng thái UFO quét -->
+    <div class="glass-panel px-4 py-2 rounded-full flex items-center gap-3 shadow-xl border-emerald-400/30">
+      <span class="inline-block w-3 h-3 rounded-full bg-emerald-400 animate-ping"></span>
+      <span id="statusText" class="text-xs sm:text-sm font-bold text-emerald-300 tracking-wide">
+        ✨ Bấm chặt nhé! UFO đang dò tín hiệu...
+      </span>
+      <span class="bg-emerald-950/80 text-emerald-300 text-xs px-2.5 py-1 rounded-full border border-emerald-500/40 font-semibold" id="studentCountBadge">
+        35 học sinh
+      </span>
+    </div>
+
+    <!-- Nút cấu hình của giáo viên -->
+    <div class="flex items-center gap-2 sm:gap-3">
+      <!-- Bật/Tắt âm thanh -->
+      <button id="btnSoundToggle" class="glass-panel p-2.5 rounded-full hover:bg-slate-800 text-sky-300 transition-all shadow-lg active:scale-95" title="Bật/Tắt Âm thanh">
+        <svg id="iconSoundOn" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path></svg>
+        <svg id="iconSoundOff" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z m12 1l6-6m-6 0l6 6"></path></svg>
+      </button>
+
+      <!-- Nút mở danh sách học sinh -->
+      <button id="btnOpenConfig" class="glass-panel hover:bg-slate-800/90 text-sky-200 px-4 py-2 rounded-full flex items-center gap-2 text-xs sm:text-sm font-bold transition-all shadow-lg active:scale-95 border-sky-400/30">
+        <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+        <span>Danh sách lớp</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- THANH ĐIỀU KHIỂN CHÍNH PHÍA DƯỚI DÀNH CHO GIÁO VIÊN -->
+  <footer class="relative z-20 pb-5 px-4 flex flex-col sm:flex-row items-center justify-center gap-4">
+    <div class="glass-panel px-6 py-3.5 rounded-2xl flex flex-wrap items-center gap-4 sm:gap-6 shadow-2xl border-sky-500/20">
+      
+      <!-- Bộ chọn số lượng học sinh -->
+      <div class="flex items-center gap-2">
+        <label for="selectQuota" class="text-xs sm:text-sm font-semibold text-sky-200">Số bạn bị bắt:</label>
+        <div class="flex items-center bg-slate-900/90 rounded-lg p-1 border border-slate-700">
+          <button id="btnDecreaseQuota" class="w-7 h-7 rounded bg-slate-800 hover:bg-slate-700 text-cyan-400 font-bold flex items-center justify-center transition active:scale-90">-</button>
+          <span id="quotaDisplay" class="w-8 text-center font-extrabold text-cyan-300 text-sm">3</span>
+          <button id="btnIncreaseQuota" class="w-7 h-7 rounded bg-slate-800 hover:bg-slate-700 text-cyan-400 font-bold flex items-center justify-center transition active:scale-90">+</button>
+        </div>
+      </div>
+
+      <!-- Nút Kích Hoạt UFO Bắt Học Sinh -->
+      <button id="btnStartAbduction" class="relative group overflow-hidden bg-gradient-to-r from-teal-400 via-cyan-500 to-emerald-500 hover:from-teal-300 hover:via-cyan-400 hover:to-emerald-400 text-slate-950 font-black px-6 py-2.5 rounded-xl shadow-[0_0_25px_rgba(45,212,191,0.55)] transition-all transform active:scale-95 flex items-center gap-2.5 text-sm sm:text-base tracking-wide">
+        <span class="text-lg animate-bounce">🛸</span>
+        <span>UFO BẮT HỌC SINH TRẢ BÀI</span>
+      </button>
+
+      <!-- Nút Thả về phố (Reset lượt) -->
+      <button id="btnResetRound" class="glass-panel hover:bg-rose-500/20 text-rose-300 border-rose-500/30 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition active:scale-95" title="Thả tất cả học sinh đã bị bắt trở lại đường phố">
+        🔄 Thả về phố
+      </button>
+    </div>
+  </footer>
+
+  <!-- MODAL QUẢN LÝ DANH SÁCH HỌC SINH -->
+  <div id="modalConfig" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="glass-panel bg-slate-900/95 border-cyan-500/40 rounded-3xl p-6 w-full max-w-lg shadow-[0_0_50px_rgba(6,182,212,0.3)]">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-700/80 mb-4">
+        <div class="flex items-center gap-2">
+          <span class="text-2xl">📝</span>
+          <h2 class="text-lg font-bold text-cyan-300">Quản Lý Danh Sách Học Sinh</h2>
+        </div>
+        <button id="btnCloseModal" class="text-slate-400 hover:text-white text-2xl font-bold leading-none">&times;</button>
+      </div>
+
+      <p class="text-xs text-slate-300 mb-2">Nhập hoặc dán danh sách tên học sinh (mỗi dòng một tên hoặc ngăn cách bằng dấu phẩy):</p>
+      
+      <textarea id="studentTextarea" rows="8" class="w-full bg-slate-950/80 border border-slate-700 rounded-xl p-3 text-sm text-sky-100 focus:outline-none focus:border-cyan-400 transition font-mono" placeholder="Nhập tên học sinh..."></textarea>
+      
+      <div class="flex items-center justify-between text-xs text-slate-400 mt-2 mb-4">
+        <span id="modalCounter">Hiện có: 0 học sinh</span>
+        <button id="btnLoadSample" class="text-cyan-400 hover:underline">Tải danh sách mẫu 35 em</button>
+      </div>
+
+      <div class="flex items-center justify-end gap-3">
+        <button id="btnCancelConfig" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold transition">Hủy</button>
+        <button id="btnSaveConfig" class="px-5 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-slate-950 text-sm font-extrabold shadow-lg transition">Lưu & Cập nhật phố</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL KẾT QUẢ VINH DANH TRẢ BÀI -->
+  <div id="modalResult" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4">
+    <div class="glass-panel bg-slate-900/95 border-emerald-400/50 rounded-3xl p-6 sm:p-8 w-full max-w-md text-center shadow-[0_0_60px_rgba(16,185,129,0.4)] animate-in fade-in zoom-in duration-300">
+      <div class="inline-flex p-3 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 text-4xl mb-3 animate-bounce">
+        👽
+      </div>
+      <h3 class="text-xs uppercase tracking-widest text-emerald-400 font-extrabold mb-1">UFO Đã Thu Nhận Thành Công!</h3>
+      <h2 class="text-xl sm:text-2xl font-black text-white font-cute mb-4">DANH SÁCH LÊN TRẢ BÀI</h2>
+
+      <div id="abductedListContainer" class="space-y-2.5 max-h-56 overflow-y-auto my-4 pr-1">
+        <!-- Render danh sách các học sinh bị bắt -->
+      </div>
+
+      <p class="text-xs text-slate-400 italic mb-5">"Chúc các em hoàn thành xuất sắc phần kiểm tra miệng nhé!"</p>
+
+      <div class="flex flex-col sm:flex-row gap-2.5 justify-center">
+        <button id="btnAckResult" class="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-400 to-teal-400 text-slate-950 font-black text-sm shadow-lg hover:brightness-110 active:scale-95 transition">
+          Đồng Ý / Bắt Đầu Trả Bài
+        </button>
+        <button id="btnDismissResult" class="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-sm border border-slate-700 active:scale-95 transition">
+          Đóng
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- THUẬT TOÁN LOGIC JAVASCRIPT ĐẦY ĐỦ -->
+  <script>
+    /* =========================================================
+       1. QUẢN LÝ ÂM THANH SCI-FI BẰNG WEB AUDIO API (NO EXTERNAL ASSETS)
+       ========================================================= */
+    class SoundEngine {
+      constructor() {
+        this.ctx = null;
+        this.muted = false;
+      }
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioContext();
+        }
+        if (this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+      playUfoHum() {
+        if (this.muted) return;
+        this.init();
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(120, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(360, this.ctx.currentTime + 0.4);
+        osc.frequency.exponentialRampToValueAtTime(140, this.ctx.currentTime + 1.0);
+
+        gain.gain.setValueAtTime(0.08, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 1.0);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 1.0);
+      }
+      playBeamSound() {
+        if (this.muted) return;
+        this.init();
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(400, now);
+        osc.frequency.linearRampToValueAtTime(880, now + 0.8);
+        osc.frequency.linearRampToValueAtTime(520, now + 1.6);
+
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.linearRampToValueAtTime(0.18, now + 0.5);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 2.0);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(now + 2.0);
+      }
+      playScream() {
+        if (this.muted) return;
+        this.init();
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(600, now);
+        osc.frequency.exponentialRampToValueAtTime(300, now + 0.35);
+
+        gain.gain.setValueAtTime(0.1, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(now + 0.35);
+      }
+      playSuccessChime() {
+        if (this.muted) return;
+        this.init();
+        const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+        notes.forEach((freq, idx) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          const t = this.ctx.currentTime + idx * 0.12;
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, t);
+          gain.gain.setValueAtTime(0.15, t);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(t);
+          osc.stop(t + 0.5);
+        });
+      }
+    }
+    const audio = new SoundEngine();
+
+    /* =========================================================
+       2. DANH SÁCH MẪU & CƠ SỞ DỮ LIỆU HỌC SINH
+       ========================================================= */
+    const SAMPLE_STUDENTS = [
+      "CAO XUÂN TIẾN", "NGUYỄN QUANG", "NGUYỄN HOÀNG", "ĐỖ VĂN KHÁNH", 
+      "HOÀNG THẾ LONG", "CAO MINH QUÂN", "ĐINH TIẾN DŨNG", "VŨ PHƯƠNG ANH", 
+      "ĐÀO ĐỨC THÀNH", "ĐỖ THẾ KHÁNH", "NGUYỄN VĂN HÙNG", "LÊ THU TRANG", 
+      "TRẦN BẢO NGỌC", "PHẠM MINH QUANG", "BÙI TIẾN ĐẠT", "VŨ HẢI YẾN", 
+      "LÊ ĐỨC PHÚC", "TRẦN MAI ANH", "NGUYỄN ĐỨC THẮNG", "HỒ THỊ MAI", 
+      "ĐẶNG HOÀNG NAM", "VŨ NGỌC HÂN", "DƯƠNG GIA HƯNG", "LÝ THÁI TỔ", 
+      "NGÔ BẢO CHÂU", "PHAN THỊ HẠNH", "TRỊNH ĐÌNH QUANG", "HOÀNG YẾN NHI", 
+      "NGUYỄN AN KHANG", "LÊ BẢO CHÂU", "ĐOÀN VĂN HẬU", "PHẠM QUỲNH ANH", 
+      "MAI TRUNG KIÊN", "CHU THỊ THẢO", "TRẦN VĂN CƯỜNG"
+    ];
+
+    const FUNNY_SHOUTS = [
+      "Cứu em với!", "Đừng bắt em mà!", "Em chưa học thuộc bài!", "Hôm nay em quên vở!",
+      "Toang em rồi!", "Sao lại là em?!", "UFO tha cho em!", "Chết em rồi thầy ơi!",
+      "Aaaaaaaa!", "Em đau bụng quá!"
+    ];
+
+    /* =========================================================
+       3. LẬP TRÌNH ĐỒ HỌA MÔ PHỎNG (CANVAS 2D)
+       ========================================================= */
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let width = (canvas.width = window.innerWidth);
+    let height = (canvas.height = window.innerHeight);
+
+    window.addEventListener('resize', () => {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+      initBuildings();
+    });
+
+    // Trạng thái ứng dụng
+    let studentsPool = [...SAMPLE_STUDENTS];
+    let quotaToAbduct = 3;
+    let currentlyAbducted = [];
+    let isScanning = false;
+    let scanTargetIdx = 0;
+    let scanTimer = 0;
+    let abductedHistory = [];
+
+    // Danh sách thực thể học sinh trên đường phố
+    let pedestrianEntities = [];
+
+    // Tòa nhà nền
+    let buildings = [];
+    function initBuildings() {
+      buildings = [];
+      const num = 14;
+      const bWidth = width / 10;
+      for (let i = 0; i < num; i++) {
+        const bH = 180 + Math.random() * 220;
+        buildings.push({
+          x: i * (bWidth * 0.85) - 50,
+          w: bWidth * 1.1,
+          h: bH,
+          color: ['#1e2436', '#161d2d', '#232b40', '#1c2232'][i % 4],
+          windows: Array.from({ length: 18 }, () => Math.random() > 0.45)
+        });
+      }
+    }
+    initBuildings();
+
+    // Đối tượng Đĩa bay UFO
+    const ufo = {
+      x: width / 2,
+      y: 110,
+      targetX: width / 2,
+      baseY: 110,
+      width: 290,
+      height: 90,
+      beamActive: true,
+      beamOpacity: 0.35,
+      beamWidthBottom: 320,
+      capturedCount: 0,
+      tilt: 0,
+      floatOffset: 0
+    };
+
+    // Lớp nhân vật học sinh (Pedestrian)
+    class StudentPedestrian {
+      constructor(name, index) {
+        this.name = name;
+        this.gender = Math.random() > 0.5 ? 'male' : 'female';
+        this.resetPosition();
+        this.x = 40 + Math.random() * (width - 80);
+        this.state = 'walking'; // walking, startled, levitating, captured
+        this.shout = '';
+        this.shoutTimer = 0;
+        this.levitateSpeed = 2 + Math.random() * 1.5;
+        this.legAngle = Math.random() * Math.PI;
+        this.colorSkin = '#fcd34d';
+        this.shirtColor = ['#38bdf8', '#fb7185', '#34d399', '#f472b6', '#facc15', '#a78bfa', '#fb923c'][index % 7];
+        this.pantsColor = this.gender === 'male' ? '#334155' : '#1e293b';
+        this.hairColor = ['#1e1b18', '#3b2f2f', '#171717'][index % 3];
+      }
+
+      resetPosition() {
+        this.groundY = height - 90 - Math.random() * 35;
+        this.y = this.groundY;
+        this.vx = (Math.random() - 0.5) * 1.2;
+        if (Math.abs(this.vx) < 0.3) this.vx = 0.5;
+        this.state = 'walking';
+        this.shout = '';
+      }
+
+      triggerShout(text) {
+        this.shout = text || FUNNY_SHOUTS[Math.floor(Math.random() * FUNNY_SHOUTS.length)];
+        this.shoutTimer = 180; // 3 giây
+      }
+
+      update() {
+        if (this.state === 'walking' || this.state === 'startled') {
+          this.x += this.vx;
+          this.legAngle += Math.abs(this.vx) * 0.15;
+          if (this.x < 30) {
+            this.x = 30;
+            this.vx *= -1;
+          } else if (this.x > width - 30) {
+            this.x = width - 30;
+            this.vx *= -1;
+          }
+          if (this.shoutTimer > 0) this.shoutTimer--;
+        } else if (this.state === 'levitating') {
+          // Bay dần lên UFO
+          const targetUfoX = ufo.x + (Math.random() - 0.5) * 20;
+          this.x += (targetUfoX - this.x) * 0.05;
+          this.y -= this.levitateSpeed;
+          this.legAngle += 0.25;
+
+          // Khi học sinh đã bay vào lòng UFO
+          if (this.y <= ufo.y + 40) {
+            this.state = 'captured';
+            ufo.capturedCount++;
+            audio.playSuccessChime();
+            checkCaptureCompletion();
+          }
+        }
+      }
+
+      draw() {
+        if (this.state === 'captured') return;
+
+        ctx.save();
+        ctx.translate(this.x, this.y);
+
+        // Hiệu ứng phát sáng khi bị chiếu trúng
+        if (this.state === 'levitating') {
+          ctx.shadowColor = '#34d399';
+          ctx.shadowBlur = 15;
+        }
+
+        // Bóng đổ trên mặt đất nếu đang đi bộ
+        if (this.state !== 'levitating') {
+          ctx.fillStyle = 'rgba(0,0,0,0.25)';
+          ctx.beginPath();
+          ctx.ellipse(0, 5, 12, 4, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        const dir = this.vx >= 0 ? 1 : -1;
+
+        // Vẽ Chân học sinh (hoạt hình bước đi)
+        ctx.strokeStyle = this.pantsColor;
+        ctx.lineWidth = 3.5;
+        ctx.lineCap = 'round';
+
+        const swing = Math.sin(this.legAngle) * 8;
+        // Chân trái
+        ctx.beginPath();
+        ctx.moveTo(-3, -12);
+        ctx.lineTo(-3 - swing, 2);
+        ctx.stroke();
+
+        // Chân phải
+        ctx.beginPath();
+        ctx.moveTo(3, -12);
+        ctx.lineTo(3 + swing, 2);
+        ctx.stroke();
+
+        // Thân áo
+        ctx.fillStyle = this.shirtColor;
+        ctx.beginPath();
+        ctx.roundRect(-7, -28, 14, 17, 3);
+        ctx.fill();
+
+        // Cặp sách / ba lô sau lưng
+        ctx.fillStyle = '#475569';
+        ctx.fillRect(-dir * 9 - 3, -26, 5, 12);
+
+        // Cổ & Đầu
+        ctx.fillStyle = this.colorSkin;
+        ctx.beginPath();
+        ctx.arc(0, -35, 7.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Tóc
+        ctx.fillStyle = this.hairColor;
+        ctx.beginPath();
+        if (this.gender === 'male') {
+          ctx.arc(0, -37, 8, Math.PI, Math.PI * 2);
+        } else {
+          // Tóc dài nữ
+          ctx.arc(0, -36, 8.5, Math.PI, Math.PI * 2);
+          ctx.rect(-8, -36, 16, 12);
+        }
+        ctx.fill();
+
+        // Mắt & Miệng (biểu cảm hoảng sợ nếu bị nhấc bổng)
+        ctx.fillStyle = '#0f172a';
+        if (this.state === 'levitating' || this.state === 'startled') {
+          // Mắt to ngạc nhiên
+          ctx.fillRect(dir * 2 - 1, -37, 2, 3);
+          ctx.beginPath();
+          ctx.arc(dir * 2, -32, 2, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          ctx.fillRect(dir * 2 - 1, -36, 2, 2);
+        }
+
+        // BẢNG TÊN BỌT KHÍ NỔI TRÊN ĐẦU (GIỐNG ẢNH THAM KHẢO)
+        this.drawNameTag();
+
+        // BONG BÓNG THOẠI KÊU CỨU
+        if (this.shout && (this.shoutTimer > 0 || this.state === 'levitating')) {
+          this.drawSpeechBubble(this.shout);
+        }
+
+        ctx.restore();
+      }
+
+      drawNameTag() {
+        const text = this.name;
+        ctx.font = 'bold 11px Nunito, sans-serif';
+        const textWidth = ctx.measureText(text).width;
+        const tagW = textWidth + 14;
+        const tagH = 19;
+        const tagY = -56;
+
+        // Khung bong bóng tên bo tròn màu trắng đục
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.35)';
+        ctx.shadowBlur = 6;
+        ctx.beginPath();
+        ctx.roundRect(-tagW / 2, tagY, tagW, tagH, 10);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // Mũi nhọn nhỏ chỉ vào đầu
+        ctx.beginPath();
+        ctx.moveTo(-3, tagY + tagH);
+        ctx.lineTo(0, tagY + tagH + 4);
+        ctx.lineTo(3, tagY + tagH);
+        ctx.fill();
+
+        // Chữ tên học sinh màu xám sẫm rõ ràng
+        ctx.fillStyle = '#1e293b';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(text, 0, tagY + tagH / 2 + 0.5);
+      }
+
+      drawSpeechBubble(text) {
+        ctx.font = '800 11px Comfortaa, cursive';
+        const textWidth = ctx.measureText(text).width;
+        const bW = textWidth + 18;
+        const bH = 22;
+        const bY = -84;
+
+        ctx.fillStyle = '#fee2e2';
+        ctx.strokeStyle = '#ef4444';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.roundRect(-bW / 2, bY, bW, bH, 8);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#b91c1c';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(text, 0, bY + bH / 2);
+      }
+    }
+
+    // Tái tạo thực thể học sinh từ danh sách tên
+    function syncPedestrians() {
+      pedestrianEntities = studentsPool.map((name, idx) => new StudentPedestrian(name, idx));
+      document.getElementById('studentCountBadge').innerText = `${studentsPool.length} học sinh`;
+      document.getElementById('modalCounter').innerText = `Hiện có: ${studentsPool.length} học sinh`;
+      document.getElementById('studentTextarea').value = studentsPool.join('\n');
+    }
+
+    /* =========================================================
+       4. HỆ THỐNG VẼ ĐỒ HỌA MÔI TRƯỜNG & UFO
+       ========================================================= */
+    let particles = [];
+    for (let p = 0; p < 45; p++) {
+      particles.push({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        r: Math.random() * 2 + 0.5,
+        alpha: Math.random(),
+        speed: 0.2 + Math.random() * 0.5
+      });
+    }
+
+    function drawCityBackdrop() {
+      // Bầu trời hoàng hôn/đêm xanh thẫm
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, height);
+      skyGrad.addColorStop(0, '#090d16');
+      skyGrad.addColorStop(0.45, '#131b2e');
+      skyGrad.addColorStop(0.85, '#222f46');
+      skyGrad.addColorStop(1, '#1b2333');
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, width, height);
+
+      // Mặt trăng nhẹ & Hạt bụi sao
+      ctx.fillStyle = '#ffffff';
+      particles.forEach(p => {
+        ctx.globalAlpha = p.alpha;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y * 0.65, p.r, 0, Math.PI * 2);
+        ctx.fill();
+        p.alpha += (Math.random() - 0.5) * 0.04;
+        if (p.alpha < 0.1) p.alpha = 0.1;
+        if (p.alpha > 0.9) p.alpha = 0.9;
+      });
+      ctx.globalAlpha = 1;
+
+      // Các tòa nhà chung cư thành phố
+      buildings.forEach(b => {
+        ctx.fillStyle = b.color;
+        const by = height - 120 - b.h;
+        ctx.fillRect(b.x, by, b.w, b.h);
+
+        // Cửa sổ phát sáng màu vàng ấm
+        const cols = 4;
+        const rows = 8;
+        const winW = 10;
+        const winH = 12;
+        const gapX = (b.w - cols * winW) / (cols + 1);
+        const gapY = (b.h - rows * winH) / (rows + 1);
+
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            const index = (r * cols + c) % b.windows.length;
+            if (b.windows[index]) {
+              ctx.fillStyle = '#fef08a';
+              ctx.globalAlpha = 0.55;
+            } else {
+              ctx.fillStyle = '#0f172a';
+              ctx.globalAlpha = 0.3;
+            }
+            ctx.fillRect(b.x + gapX + c * (winW + gapX), by + gapY + r * (winH + gapY), winW, winH);
+          }
+        }
+        ctx.globalAlpha = 1;
+      });
+
+      // Mặt đường & Vỉa hè
+      const streetY = height - 120;
+      ctx.fillStyle = '#334155';
+      ctx.fillRect(0, streetY, width, 120);
+
+      // Vạch kẻ đường phố
+      ctx.strokeStyle = '#94a3b8';
+      ctx.lineWidth = 3;
+      ctx.setLineDash([25, 20]);
+      ctx.beginPath();
+      ctx.moveTo(0, height - 55);
+      ctx.lineTo(width, height - 55);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Cột đèn đường phát sáng (Street lights)
+      const lightInterval = Math.max(220, width / 5);
+      for (let lx = 90; lx < width; lx += lightInterval) {
+        drawStreetLamp(lx, streetY);
+      }
+
+      // Xe máy xe ga phong cách Việt Nam đậu/chạy trên phố
+      drawScooter(width * 0.18, streetY + 30, '#ef4444');
+      drawScooter(width * 0.52, streetY + 36, '#3b82f6');
+      drawScooter(width * 0.82, streetY + 28, '#10b981');
+    }
+
+    function drawStreetLamp(x, groundY) {
+      ctx.save();
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 5;
+      // Trụ đèn
+      ctx.beginPath();
+      ctx.moveTo(x, groundY + 15);
+      ctx.lineTo(x, groundY - 100);
+      ctx.quadraticCurveTo(x, groundY - 130, x - 25, groundY - 130);
+      ctx.stroke();
+
+      // Chao đèn
+      ctx.fillStyle = '#1e293b';
+      ctx.beginPath();
+      ctx.arc(x - 25, groundY - 130, 8, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Ánh sáng tỏa ra
+      const lampGrad = ctx.createRadialGradient(x - 25, groundY - 128, 5, x - 25, groundY - 128, 90);
+      lampGrad.addColorStop(0, 'rgba(254, 240, 138, 0.45)');
+      lampGrad.addColorStop(1, 'rgba(254, 240, 138, 0)');
+      ctx.fillStyle = lampGrad;
+      ctx.beginPath();
+      ctx.moveTo(x - 25, groundY - 128);
+      ctx.lineTo(x - 70, groundY + 15);
+      ctx.lineTo(x + 20, groundY + 15);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawScooter(x, y, color) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.fillStyle = '#1e293b';
+      // Bánh xe
+      ctx.beginPath();
+      ctx.arc(-16, 8, 7, 0, Math.PI * 2);
+      ctx.arc(16, 8, 7, 0, Math.PI * 2);
+      ctx.fill();
+      // Khung xe
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.roundRect(-14, -4, 28, 9, 4);
+      ctx.fill();
+      // Đầu xe & Đèn
+      ctx.fillStyle = '#334155';
+      ctx.fillRect(8, -14, 4, 12);
+      ctx.fillStyle = '#fef08a';
+      ctx.beginPath();
+      ctx.arc(14, -13, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    /* VẼ CHIẾC UFO KHỔNG LỒ VÀ CHÙM TIA TRACTOR BEAM */
+    function drawUFO(time) {
+      ufo.floatOffset = Math.sin(time * 0.003) * 6;
+      const curY = ufo.baseY + ufo.floatOffset;
+
+      // Cập nhật vị trí UFO lượn mượt mà về phía targetX
+      ufo.x += (ufo.targetX - ufo.x) * 0.045;
+      ufo.tilt = (ufo.targetX - ufo.x) * 0.0025;
+
+      ctx.save();
+      ctx.translate(ufo.x, curY);
+      ctx.rotate(ufo.tilt);
+
+      // 1. Chùm sáng ngọc bích / dạ quang (Tractor Beam)
+      if (ufo.beamActive) {
+        ctx.save();
+        const beamGrad = ctx.createLinearGradient(0, 20, 0, height - curY);
+        beamGrad.addColorStop(0, 'rgba(52, 211, 153, 0.75)');
+        beamGrad.addColorStop(0.3, 'rgba(45, 212, 191, 0.45)');
+        beamGrad.addColorStop(0.8, 'rgba(6, 182, 212, 0.2)');
+        beamGrad.addColorStop(1, 'rgba(16, 185, 129, 0)');
+
+        ctx.fillStyle = beamGrad;
+        ctx.beginPath();
+        const beamWTop = 85;
+        const beamWBot = ufo.beamWidthBottom;
+        const bHeight = height - curY;
+        ctx.moveTo(-beamWTop / 2, 25);
+        ctx.lineTo(beamWTop / 2, 25);
+        ctx.lineTo(beamWBot / 2, bHeight);
+        ctx.lineTo(-beamWBot / 2, bHeight);
+        ctx.closePath();
+        ctx.fill();
+
+        // Đường quét radar sáng lấp lánh bên trong chùm sáng
+        const scanLineY = ((time * 0.15) % bHeight);
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        const curScanW = beamWTop + (beamWBot - beamWTop) * (scanLineY / bHeight);
+        ctx.moveTo(-curScanW / 2, scanLineY);
+        ctx.lineTo(curScanW / 2, scanLineY);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // 2. Buồng lái vòm kính màu ngọc bích & người ngoài hành tinh
+      ctx.fillStyle = 'rgba(110, 231, 183, 0.85)';
+      ctx.shadowColor = '#34d399';
+      ctx.shadowBlur = 20;
+      ctx.beginPath();
+      ctx.arc(0, -10, 52, Math.PI, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      // 2 sinh vật Alien nhỏ nhắn lái tàu với râu ăng-ten ngộ nghĩnh (như hình)
+      drawAlienPilot(-15, -28);
+      drawAlienPilot(15, -28);
+
+      // 3. Đĩa thân UFO màu trắng bạc kim loại
+      ctx.fillStyle = '#f8fafc';
+      ctx.beginPath();
+      ctx.ellipse(0, 0, ufo.width / 2, ufo.height / 2, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Đổ bóng đĩa dưới
+      ctx.fillStyle = '#cbd5e1';
+      ctx.beginPath();
+      ctx.ellipse(0, 10, ufo.width / 2 - 10, ufo.height / 2 - 8, 0, 0, Math.PI);
+      ctx.fill();
+
+      // 4. Màn hình LED kỹ thuật số trên UFO hiển thị tỉ số (ví dụ: "0 / 3")
+      ctx.fillStyle = '#064e3b';
+      ctx.strokeStyle = '#34d399';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.roundRect(-42, -14, 84, 28, 8);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#6ee7b7';
+      ctx.font = '900 16px Comfortaa, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`${ufo.capturedCount}/${quotaToAbduct}`, 0, 0);
+
+      // 5. Vòng tròn bóng đèn nhấp nháy nhiều màu quanh đĩa UFO
+      const numLights = 10;
+      for (let i = 0; i < numLights; i++) {
+        const angle = (i / numLights) * Math.PI * 2;
+        const lx = Math.cos(angle) * (ufo.width / 2 - 14);
+        const ly = Math.sin(angle) * (ufo.height / 2 - 14);
+        const lightColors = ['#f59e0b', '#ef4444', '#10b981', '#38bdf8'];
+        const lightColor = lightColors[(i + Math.floor(time * 0.005)) % lightColors.length];
+
+        ctx.fillStyle = lightColor;
+        ctx.beginPath();
+        ctx.arc(lx, ly, 4.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // 6. Ống xả đáy phát sáng
+      ctx.fillStyle = '#10b981';
+      ctx.shadowColor = '#6ee7b7';
+      ctx.shadowBlur = 15;
+      ctx.beginPath();
+      ctx.ellipse(0, 24, 46, 12, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      ctx.restore();
+    }
+
+    function drawAlienPilot(x, y) {
+      // Đầu xanh
+      ctx.fillStyle = '#86efac';
+      ctx.beginPath();
+      ctx.arc(x, y, 9, 0, Math.PI * 2);
+      ctx.fill();
+      // Mắt to đen nhánh
+      ctx.fillStyle = '#064e3b';
+      ctx.beginPath();
+      ctx.arc(x - 3, y - 1, 2.5, 0, Math.PI * 2);
+      ctx.arc(x + 3, y - 1, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+      // Râu ăng-ten
+      ctx.strokeStyle = '#86efac';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(x - 4, y - 8);
+      ctx.lineTo(x - 7, y - 16);
+      ctx.moveTo(x + 4, y - 8);
+      ctx.lineTo(x + 7, y - 16);
+      ctx.stroke();
+      ctx.fillStyle = '#fef08a';
+      ctx.beginPath();
+      ctx.arc(x - 7, y - 16, 2, 0, Math.PI * 2);
+      ctx.arc(x + 7, y - 16, 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    /* =========================================================
+       5. VÒNG LẶP CHÍNH CỦA TRÒ CHƠI (GAME LOOP)
+       ========================================================= */
+    function gameLoop(time) {
+      ctx.clearRect(0, 0, width, height);
+
+      // Cập nhật trạng thái quét UFO
+      handleScanningLogic();
+
+      // Vẽ phong cảnh thành phố
+      drawCityBackdrop();
+
+      // Cập nhật và vẽ các bạn học sinh đi lại
+      pedestrianEntities.forEach(ped => {
+        ped.update();
+        ped.draw();
+      });
+
+      // Vẽ chiếc UFO
+      drawUFO(time);
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    /* =========================================================
+       6. LOGIC DÒ TÌM VÀ HÚT HỌC SINH LÊN TRẢ BÀI
+       ========================================================= */
+    let targetsToAbduct = [];
+    let currentAbductingTarget = null;
+
+    function startScanningProcess() {
+      if (isScanning) return;
+      if (pedestrianEntities.length === 0) {
+        alertModal("Lớp học chưa có học sinh nào!", "Vui lòng nhập danh sách học sinh trước.");
+        return;
+      }
+
+      // Khởi tạo audio context qua click
+      audio.init();
+
+      // Chọn ngẫu nhiên N học sinh chưa bị bắt
+      const availableStudents = pedestrianEntities.filter(p => p.state === 'walking');
+      if (availableStudents.length === 0) {
+        document.getElementById('statusText').innerText = "Tất cả học sinh đã lên tàu rồi!";
+        return;
+      }
+
+      const count = Math.min(quotaToAbduct, availableStudents.length);
+      // Xáo trộn mảng ngẫu nhiên (Fisher-Yates shuffle)
+      const shuffled = [...availableStudents].sort(() => Math.random() - 0.5);
+      targetsToAbduct = shuffled.slice(0, count);
+
+      isScanning = true;
+      scanTimer = 0;
+      ufo.capturedCount = 0;
+      currentlyAbducted = [];
+      document.getElementById('statusText').innerText = "🛸 Bám chặt nhé! UFO đang dò sóng khóa mục tiêu...";
+      audio.playUfoHum();
+
+      // Tạo tiếng hét lo lắng cho các bạn xung quanh
+      pedestrianEntities.forEach(p => {
+        if (Math.random() > 0.45) {
+          p.triggerShout();
+        }
+      });
+
+      nextAbductionStep();
+    }
+
+    function nextAbductionStep() {
+      if (targetsToAbduct.length === 0) {
+        // Đã bắt xong toàn bộ học sinh theo chỉ tiêu
+        finishAbductionRound();
+        return;
+      }
+
+      currentAbductingTarget = targetsToAbduct.shift();
+      // Di chuyển UFO đến đỉnh đầu học sinh này
+      ufo.targetX = currentAbductingTarget.x;
+      document.getElementById('statusText').innerText = `🛸 Đang khóa mục tiêu vào: ${currentAbductingTarget.name}!`;
+
+      // Sau 1.2s căn chỉnh, bắt đầu hút lên
+      setTimeout(() => {
+        if (!currentAbductingTarget) return;
+        currentAbductingTarget.state = 'levitating';
+        currentAbductingTarget.triggerShout("Á á á! Cứu em với!!!");
+        audio.playBeamSound();
+        audio.playScream();
+      }, 1200);
+    }
+
+    function checkCaptureCompletion() {
+      if (currentAbductingTarget && currentAbductingTarget.state === 'captured') {
+        currentlyAbducted.push(currentAbductingTarget);
+        currentAbductingTarget = null;
+        // Tiếp tục bắt bạn tiếp theo sau 0.8 giây
+        setTimeout(() => {
+          nextAbductionStep();
+        }, 800);
+      }
+    }
+
+    function finishAbductionRound() {
+      isScanning = false;
+      document.getElementById('statusText').innerText = `✨ Hoàn thành! Đã đón đủ ${currentlyAbducted.length} bạn lên trả bài!`;
+      audio.playSuccessChime();
+
+      // Mở bảng vinh danh
+      showResultModal();
+    }
+
+    function handleScanningLogic() {
+      if (!isScanning) return;
+      scanTimer++;
+      // Khi đang dò tín hiệu chưa khóa mục tiêu, UFO lượn nhẹ qua lại
+      if (!currentAbductingTarget && scanTimer % 180 === 0) {
+        const randomX = 100 + Math.random() * (width - 200);
+        ufo.targetX = randomX;
+      }
+    }
+
+    /* =========================================================
+       7. TƯƠNG TÁC GIAO DIỆN & MODAL SỰ KIỆN
+       ========================================================= */
+    const quotaDisplay = document.getElementById('quotaDisplay');
+    document.getElementById('btnIncreaseQuota').addEventListener('click', () => {
+      if (quotaToAbduct < 10) {
+        quotaToAbduct++;
+        quotaDisplay.innerText = quotaToAbduct;
+      }
+    });
+    document.getElementById('btnDecreaseQuota').addEventListener('click', () => {
+      if (quotaToAbduct > 1) {
+        quotaToAbduct--;
+        quotaDisplay.innerText = quotaToAbduct;
+      }
+    });
+
+    document.getElementById('btnStartAbduction').addEventListener('click', () => {
+      startScanningProcess();
+    });
+
+    // Thả học sinh trở lại mặt đất
+    document.getElementById('btnResetRound').addEventListener('click', () => {
+      pedestrianEntities.forEach(p => p.resetPosition());
+      ufo.capturedCount = 0;
+      isScanning = false;
+      currentAbductingTarget = null;
+      targetsToAbduct = [];
+      ufo.targetX = width / 2;
+      document.getElementById('statusText').innerText = "✨ Đã thả các bạn về phố an toàn! Sẵn sàng lượt mới.";
+    });
+
+    // Bật tắt âm thanh
+    const btnSoundToggle = document.getElementById('btnSoundToggle');
+    const iconSoundOn = document.getElementById('iconSoundOn');
+    const iconSoundOff = document.getElementById('iconSoundOff');
+    btnSoundToggle.addEventListener('click', () => {
+      audio.init();
+      audio.muted = !audio.muted;
+      if (audio.muted) {
+        iconSoundOn.classList.add('hidden');
+        iconSoundOff.classList.remove('hidden');
+      } else {
+        iconSoundOn.classList.remove('hidden');
+        iconSoundOff.classList.add('hidden');
+      }
+    });
+
+    // Modal cấu hình học sinh
+    const modalConfig = document.getElementById('modalConfig');
+    const studentTextarea = document.getElementById('studentTextarea');
+    document.getElementById('btnOpenConfig').addEventListener('click', () => {
+      studentTextarea.value = studentsPool.join('\n');
+      modalConfig.classList.remove('hidden');
+    });
+    document.getElementById('btnCloseModal').addEventListener('click', () => modalConfig.classList.add('hidden'));
+    document.getElementById('btnCancelConfig').addEventListener('click', () => modalConfig.classList.add('hidden'));
+
+    document.getElementById('btnLoadSample').addEventListener('click', () => {
+      studentTextarea.value = SAMPLE_STUDENTS.join('\n');
+    });
+
+    document.getElementById('btnSaveConfig').addEventListener('click', () => {
+      const rawText = studentTextarea.value;
+      const parsed = rawText
+        .split(/[\n,]+/)
+        .map(s => s.trim().toUpperCase())
+        .filter(s => s.length > 0);
+
+      if (parsed.length === 0) {
+        alert("Vui lòng nhập ít nhất 1 tên học sinh!");
+        return;
+      }
+      studentsPool = parsed;
+      syncPedestrians();
+      ufo.capturedCount = 0;
+      modalConfig.classList.add('hidden');
+    });
+
+    // Modal kết quả trả bài
+    const modalResult = document.getElementById('modalResult');
+    const abductedListContainer = document.getElementById('abductedListContainer');
+
+    function showResultModal() {
+      abductedListContainer.innerHTML = '';
+      currentlyAbducted.forEach((st, idx) => {
+        const item = document.createElement('div');
+        item.className = 'flex items-center justify-between p-3 rounded-xl bg-slate-800/90 border border-emerald-500/30 text-white';
+        item.innerHTML = `
+          <div class="flex items-center gap-3">
+            <span class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 font-extrabold text-xs flex items-center justify-center border border-emerald-400/40">${idx + 1}</span>
+            <span class="font-bold text-sm tracking-wide text-sky-200">${st.name}</span>
+          </div>
+          <span class="text-xs bg-emerald-950 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-500/30 font-semibold">Đã chọn</span>
+        `;
+        abductedListContainer.appendChild(item);
+      });
+      modalResult.classList.remove('hidden');
+    }
+
+    document.getElementById('btnAckResult').addEventListener('click', () => {
+      modalResult.classList.add('hidden');
+    });
+    document.getElementById('btnDismissResult').addEventListener('click', () => {
+      modalResult.classList.add('hidden');
+    });
+
+    // Click vào canvas để UFO bay tới ngắm nghía vị trí đó
+    canvas.addEventListener('pointerdown', (e) => {
+      if (!isScanning) {
+        ufo.targetX = e.clientX;
+        audio.playUfoHum();
+      }
+    });
+
+    // Khởi tạo danh sách ban đầu & Khởi chạy Game loop
+    window.onload = () => {
+      syncPedestrians();
+      requestAnimationFrame(gameLoop);
+    };
+  </script>
+</body>
+</html>
